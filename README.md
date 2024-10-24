@@ -40,4 +40,4 @@ Make sure you have the following installed on your system:
 
 ## Acknowledgments
 
-- Thanks to [pix2pix]([https://github.com/akanametov/pix2pix)]) for their code that contributed to this project. 
+- Thanks to [Repo Name](https://github.com/username/repo-name) for their code that contributed to this project. 

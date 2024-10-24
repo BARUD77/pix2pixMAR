@@ -31,7 +31,13 @@ Make sure you have the following installed on your system:
     pip install -r requirements.txt
     ```
 
+
 4. If using a GPU, ensure CUDA is installed properly:
     ```bash
     python -c "import torch; print(torch.cuda.is_available())"
     ```
+
+
+## Acknowledgments
+
+- Thanks to [pix2pix]([https://github.com/akanametov/pix2pix)]) for their code that contributed to this project. 

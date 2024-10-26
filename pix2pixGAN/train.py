@@ -85,7 +85,7 @@ for epoch in range(epochs):
     de_loss = 0.
     start = time.time()
     bar = IncrementalBar(f'[Epoch {epoch+1}/{epochs}]', max=len(dataloader))
-    for batch_idx, (x, real) in enumerate(dataloader):
+    for batch_idx, (x, real) in enumerate(train_loader):
         # Each batch contains artifact-affected images (x)  and their corresponding clean images (real)
         x=x.to(device)
         real = real.to(device)
@@ -127,7 +127,7 @@ for epoch in range(epochs):
     num_batches = 0
     
     with torch.no_grad():
-        for val_x, val_real in dataloader:
+        for batch_idx, (val_x, val_real) in enumerate(val_loader):
             val_x, val_real = val_x.to(device), val_real.to(device)
             val_fake = generator(val_x)
             

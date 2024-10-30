@@ -1,6 +1,7 @@
 from skimage.metrics import structural_similarity as ssim
 import math
 import numpy as np
+import torch
 
 # SSIM and PSNR calculation functions
 def calculate_ssim(img1, img2):

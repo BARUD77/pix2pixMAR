@@ -84,7 +84,7 @@ for epoch in range(epochs):
     ge_loss = 0.
     de_loss = 0.
     start = time.time()
-    bar = IncrementalBar(f'[Epoch {epoch+1}/{epochs}]', max=len(dataloader))
+    bar = IncrementalBar(f'[Epoch {epoch+1}/{epochs}]', max=len(train_loader))
     for batch_idx, (x, real) in enumerate(train_loader):
         # Each batch contains artifact-affected images (x)  and their corresponding clean images (real)
         x=x.to(device)
@@ -117,8 +117,8 @@ for epoch in range(epochs):
         bar.next()
     bar.finish()
     # obtain per epoch losses
-    g_loss = ge_loss/len(dataloader)
-    d_loss = de_loss/len(dataloader)
+    g_loss = ge_loss/len(train_loader)
+    d_loss = de_loss/len(train_loader)
 
     # Validation phase
     generator.eval()  # Set the model to evaluation mode

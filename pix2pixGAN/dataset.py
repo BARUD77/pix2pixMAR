@@ -5,6 +5,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 from PIL import Image  # Import PIL to handle image conversion
 
+
 class ArtifactDataset(Dataset):
     def __init__(self, txt_file, root_dir, transform=None):
         self.root_dir = root_dir
@@ -49,3 +50,67 @@ class ArtifactDataset(Dataset):
             gt_image = self.transform(gt_image)
         
         return artifact_image, gt_image
+
+
+
+
+
+class MetalArtifactDataset(Dataset):
+    def __init__(self, metal_dir, gt_dir, augment=False):
+        """
+        Args:
+            metal_dir (str): Path to the directory with artifact-affected images (metal).
+            gt_dir (str): Path to the directory with ground truth images (GT).
+            augment (bool): If True, apply data augmentation.
+        """
+        self.metal_dir = metal_dir
+        self.gt_dir = gt_dir
+        self.augment = augment
+
+        # Get list of file names in the metal directory
+        self.image_filenames = [f for f in os.listdir(metal_dir) if f.endswith('.png')]
+
+        # Define resizing and transformation
+        self.transform = transforms.Compose([
+            transforms.Resize((256, 256)),  # Resize to 256x256 for GAN
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.5], std=[0.5])
+        ])
+
+        # Define augmentations if enabled
+        if augment:
+            self.augmentation = transforms.Compose([
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
+                transforms.RandomRotation(15),  # Random rotation within 15 degrees
+                transforms.ColorJitter(brightness=0.2, contrast=0.2)  # Adjust brightness and contrast
+            ])
+        else:
+            self.augmentation = None
+
+    def __len__(self):
+        return len(self.image_filenames)
+
+    def __getitem__(self, idx):
+        # Get the image filename
+        img_name = self.image_filenames[idx]
+
+        # Load the metal artifact image and ground truth image
+        metal_image_path = os.path.join(self.metal_dir, img_name)
+        gt_image_path = os.path.join(self.gt_dir, img_name)
+
+        # Open images
+        metal_image = Image.open(metal_image_path).convert("L")  # Assuming grayscale images
+        gt_image = Image.open(gt_image_path).convert("L")
+
+        # Apply augmentations if enabled
+        if self.augmentation:
+            seed = torch.Generator().manual_seed(idx)  # Ensure consistent augmentation
+            metal_image = self.augmentation(metal_image)
+            gt_image = self.augmentation(gt_image)
+
+        # Apply resizing and normalization transformations
+        metal_image = self.transform(metal_image)
+        gt_image = self.transform(gt_image)
+
+        return metal_image, gt_image

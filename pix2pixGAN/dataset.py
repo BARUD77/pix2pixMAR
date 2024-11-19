@@ -56,26 +56,39 @@ class ArtifactDataset(Dataset):
 
 
 class MetalArtifactDataset(Dataset):
-    def __init__(self, metal_dir, gt_dir, augment=False):
+    def __init__(self, metal_dir, gt_dir, mode="down", augment=False):
         """
         Args:
             metal_dir (str): Path to the directory with artifact-affected images (metal).
             gt_dir (str): Path to the directory with ground truth images (GT).
+            mode (str): Mode of image preprocessing - 'up' for padding to 512x512, 'down' for resizing to 256x256.
             augment (bool): If True, apply data augmentation.
         """
         self.metal_dir = metal_dir
         self.gt_dir = gt_dir
+        self.mode = mode.lower()  # Convert to lowercase for consistency
         self.augment = augment
 
         # Get list of file names in the metal directory
         self.image_filenames = [f for f in os.listdir(metal_dir) if f.endswith('.png')]
 
-        # Define resizing and transformation
-        self.transform = transforms.Compose([
-            transforms.Resize((256, 256)),  # Resize to 256x256 for GAN
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.5], std=[0.5])
-        ])
+        # Define transformations
+        if self.mode == "up":
+            # Padding transformation to 512x512
+            self.transform = transforms.Compose([
+                transforms.Pad(padding=(74, 74)),  # Pad (512 - 364) // 2 = 74 on each side
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.5], std=[0.5])
+            ])
+        elif self.mode == "down":
+            # Resize transformation to 256x256
+            self.transform = transforms.Compose([
+                transforms.Resize((256, 256)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.5], std=[0.5])
+            ])
+        else:
+            raise ValueError("Invalid mode. Use 'up' for padding or 'down' for resizing.")
 
         # Define augmentations if enabled
         if augment:
@@ -105,11 +118,13 @@ class MetalArtifactDataset(Dataset):
 
         # Apply augmentations if enabled
         if self.augmentation:
-            seed = torch.Generator().manual_seed(idx)  # Ensure consistent augmentation
+            # Ensure consistent augmentation for paired images
+            seed = torch.Generator().manual_seed(idx)
+            torch.manual_seed(seed.initial_seed())
             metal_image = self.augmentation(metal_image)
             gt_image = self.augmentation(gt_image)
 
-        # Apply resizing and normalization transformations
+        # Apply transformations (either padding or resizing based on mode)
         metal_image = self.transform(metal_image)
         gt_image = self.transform(gt_image)
 

@@ -1,59 +1,55 @@
 import torch
 from torch import nn
-from torch.nn import functional as F
 
-# Define the ConvBlock
-class ConvBlock(nn.Module):
-    def __init__(self, ch_in, ch_out):
+class EncoderBlock(nn.Module):
+    """Encoder block with attention capability"""
+    def __init__(self, inplanes, outplanes, kernel_size=4, stride=2, padding=1, norm=True):
         super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(ch_in, ch_out, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.BatchNorm2d(ch_out),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(ch_out, ch_out, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.BatchNorm2d(ch_out),
-            nn.ReLU(inplace=True),
-        )
+        self.lrelu = nn.LeakyReLU(0.2, inplace=True)
+        self.conv = nn.Conv2d(inplanes, outplanes, kernel_size, stride, padding)
+        self.bn = nn.BatchNorm2d(outplanes) if norm else None
 
     def forward(self, x):
-        return self.conv(x)
+        fx = self.lrelu(x)
+        fx = self.conv(fx)
+        if self.bn is not None:
+            fx = self.bn(fx)
+        return fx
 
-
-# Define the UpConvBlock
-class UpConvBlock(nn.Module):
-    def __init__(self, ch_in, ch_out):
+class DecoderBlock(nn.Module):
+    """Decoder block with attention capability"""
+    def __init__(self, inplanes, outplanes, kernel_size=4, stride=2, padding=1, dropout=False):
         super().__init__()
-        self.up = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True),
-            nn.Conv2d(ch_in, ch_out, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.BatchNorm2d(ch_out),
-            nn.ReLU(inplace=True),
-        )
+        self.relu = nn.ReLU(inplace=True)
+        self.deconv = nn.ConvTranspose2d(inplanes, outplanes, kernel_size, stride, padding)
+        self.bn = nn.BatchNorm2d(outplanes)
+        self.dropout = nn.Dropout2d(p=0.5, inplace=True) if dropout else None
 
     def forward(self, x):
-        return self.up(x)
+        fx = self.relu(x)
+        fx = self.deconv(fx)
+        fx = self.bn(fx)
+        if self.dropout:
+            fx = self.dropout(fx)
+        return fx
 
-
-# Define the AttentionBlock
 class AttentionBlock(nn.Module):
+    """Attention block for Attention U-Net"""
     def __init__(self, f_g, f_l, f_int):
         super().__init__()
         self.w_g = nn.Sequential(
             nn.Conv2d(f_g, f_int, kernel_size=1, stride=1, padding=0, bias=True),
-            nn.BatchNorm2d(f_int),
+            nn.BatchNorm2d(f_int)
         )
-
         self.w_x = nn.Sequential(
             nn.Conv2d(f_l, f_int, kernel_size=1, stride=1, padding=0, bias=True),
-            nn.BatchNorm2d(f_int),
+            nn.BatchNorm2d(f_int)
         )
-
         self.psi = nn.Sequential(
             nn.Conv2d(f_int, 1, kernel_size=1, stride=1, padding=0, bias=True),
             nn.BatchNorm2d(1),
-            nn.Sigmoid(),
+            nn.Sigmoid()
         )
-
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, g, x):
@@ -63,100 +59,77 @@ class AttentionBlock(nn.Module):
         psi = self.psi(psi)
         return psi * x
 
-
-# Define the Attention U-Net Model
-class AttentionUNet(nn.Module):
-    def __init__(self, in_channel=1, out_channel=1):
+class AttentionUNetGenerator(nn.Module):
+    """Attention U-Net Generator"""
+    def __init__(self, in_channels=1, out_channels=1):
         super().__init__()
-        self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
 
         # Encoder
-        self.conv1 = ConvBlock(ch_in=in_channel, ch_out=64)
-        self.conv2 = ConvBlock(ch_in=64, ch_out=128)
-        self.conv3 = ConvBlock(ch_in=128, ch_out=256)
-        self.conv4 = ConvBlock(ch_in=256, ch_out=512)
-        self.conv5 = ConvBlock(ch_in=512, ch_out=1024)
+        self.encoder1 = nn.Conv2d(in_channels, 64, kernel_size=4, stride=2, padding=1)
+        self.encoder2 = EncoderBlock(64, 128)
+        self.encoder3 = EncoderBlock(128, 256)
+        self.encoder4 = EncoderBlock(256, 512)
+        self.encoder5 = EncoderBlock(512, 512)
+        self.encoder6 = EncoderBlock(512, 512)
+        self.encoder7 = EncoderBlock(512, 512)
+        self.encoder8 = EncoderBlock(512, 512, norm=False)
 
-        # Decoder
-        self.up5 = UpConvBlock(ch_in=1024, ch_out=512)
-        self.att5 = AttentionBlock(f_g=512, f_l=512, f_int=256)
-        self.upconv5 = ConvBlock(ch_in=1024, ch_out=512)
-
-        self.up4 = UpConvBlock(ch_in=512, ch_out=256)
-        self.att4 = AttentionBlock(f_g=256, f_l=256, f_int=128)
-        self.upconv4 = ConvBlock(ch_in=512, ch_out=256)
-
-        self.up3 = UpConvBlock(ch_in=256, ch_out=128)
-        self.att3 = AttentionBlock(f_g=128, f_l=128, f_int=64)
-        self.upconv3 = ConvBlock(ch_in=256, ch_out=128)
-
-        self.up2 = UpConvBlock(ch_in=128, ch_out=64)
-        self.att2 = AttentionBlock(f_g=64, f_l=64, f_int=32)
-        self.upconv2 = ConvBlock(ch_in=128, ch_out=64)
-
-        self.conv_1x1 = nn.Conv2d(64, out_channel, kernel_size=1, stride=1, padding=0)
+        # Decoder with attention
+        self.decoder8 = DecoderBlock(512, 512, dropout=True)
+        self.attention7 = AttentionBlock(f_g=512, f_l=512, f_int=256)
+        self.decoder7 = DecoderBlock(2 * 512, 512, dropout=True)
+        self.attention6 = AttentionBlock(f_g=512, f_l=512, f_int=256)
+        self.decoder6 = DecoderBlock(2 * 512, 512, dropout=True)
+        self.attention5 = AttentionBlock(f_g=512, f_l=512, f_int=256)
+        self.decoder5 = DecoderBlock(2 * 512, 512)
+        self.attention4 = AttentionBlock(f_g=512, f_l=256, f_int=128)
+        self.decoder4 = DecoderBlock(2 * 256, 256)
+        self.attention3 = AttentionBlock(f_g=256, f_l=128, f_int=64)
+        self.decoder3 = DecoderBlock(2 * 128, 128)
+        self.attention2 = AttentionBlock(f_g=128, f_l=64, f_int=32)
+        self.decoder2 = DecoderBlock(2 * 64, 64)
+        self.decoder1 = nn.ConvTranspose2d(2 * 64, out_channels, kernel_size=4, stride=2, padding=1)
 
     def forward(self, x):
-        # Encoder
-        x1 = self.conv1(x)
-        x2 = self.conv2(self.maxpool(x1))
-        x3 = self.conv3(self.maxpool(x2))
-        x4 = self.conv4(self.maxpool(x3))
-        x5 = self.conv5(self.maxpool(x4))
+        # Encoder forward
+        e1 = self.encoder1(x)
+        e2 = self.encoder2(e1)
+        e3 = self.encoder3(e2)
+        e4 = self.encoder4(e3)
+        e5 = self.encoder5(e4)
+        e6 = self.encoder6(e5)
+        e7 = self.encoder7(e6)
+        e8 = self.encoder8(e7)
 
-        # Decoder
-        d5 = self.up5(x5)
-        x4 = self.att5(d5, x4)
-        d5 = torch.cat((x4, d5), dim=1)
-        d5 = self.upconv5(d5)
+        # Decoder forward with attention
+        d8 = self.decoder8(e8)
+        e7 = self.attention7(d8, e7)
+        d8 = torch.cat([d8, e7], dim=1)
 
-        d4 = self.up4(d5)
-        x3 = self.att4(d4, x3)
-        d4 = torch.cat((x3, d4), dim=1)
-        d4 = self.upconv4(d4)
+        d7 = self.decoder7(d8)
+        e6 = self.attention6(d7, e6)
+        d7 = torch.cat([d7, e6], dim=1)
 
-        d3 = self.up3(d4)
-        x2 = self.att3(d3, x2)
-        d3 = torch.cat((x2, d3), dim=1)
-        d3 = self.upconv3(d3)
+        d6 = self.decoder6(d7)
+        e5 = self.attention5(d6, e5)
+        d6 = torch.cat([d6, e5], dim=1)
 
-        d2 = self.up2(d3)
-        x1 = self.att2(d2, x1)
-        d2 = torch.cat((x1, d2), dim=1)
-        d2 = self.upconv2(d2)
+        d5 = self.decoder5(d6)
+        e4 = self.attention4(d5, e4)
+        d5 = torch.cat([d5, e4], dim=1)
 
-        d1 = self.conv_1x1(d2)
+        d4 = self.decoder4(d5)
+        e3 = self.attention3(d4, e3)
+        d4 = torch.cat([d4, e3], dim=1)
 
-        return torch.sigmoid(d1)
+        d3 = self.decoder3(d4)
+        e2 = self.attention2(d3, e2)
+        d3 = torch.cat([d3, e2], dim=1)
 
+        d2 = self.decoder2(d3)
+        d2 = torch.cat([d2, e1], dim=1)
 
-# Dice Loss Function
-class DiceLoss(nn.Module):
-    def __init__(self):
-        super(DiceLoss, self).__init__()
+        d1 = self.decoder1(d2)
 
-    def forward(self, inputs, targets, smooth=1):
-        inputs = torch.sigmoid(inputs)
-        inputs = inputs.view(-1)
-        targets = targets.view(-1)
+        return torch.tanh(d1)
 
-        intersection = (inputs * targets).sum()
-        dice = (2.0 * intersection + smooth) / (inputs.sum() + targets.sum() + smooth)
-        return 1 - dice
-
-
-# Dice Coefficient Metric
-def dice_coef_metric(inputs, targets):
-    inputs = (inputs > 0.5).float()
-    targets = targets.float()
-    intersection = 2.0 * (inputs * targets).sum()
-    union = inputs.sum() + targets.sum()
-    return intersection / union if union != 0 else 1.0
-
-
-# Sanity Check
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model = AttentionUNet().to(device)
-sample_input = torch.randn(1, 3, 256, 256).to(device)
-output = model(sample_input)
-print(f"Output Shape: {output.shape}")

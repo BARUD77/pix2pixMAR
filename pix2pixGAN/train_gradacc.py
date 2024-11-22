@@ -57,7 +57,7 @@ print(f"Validation set size: {len(val_dataset)}")
 
 # models
 print('Defining models!')
-generator = AttentionUNet().to(device)
+generator = AttentionUNetGenerator().to(device)
 discriminator = ConditionalDiscriminator().to(device)
 
 #optimizers

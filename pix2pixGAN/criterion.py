@@ -12,7 +12,15 @@ class GeneratorLoss(nn.Module):
         fake_target = torch.ones_like(fake_pred)
         loss = self.bce(fake_pred, fake_target) + self.alpha* self.l1(fake, real)
         return loss
-    
+
+class UNetLoss(nn.Module):
+    def __init__(self,):
+        super().__init__()
+        self.l1 = nn.L1Loss()  # L1 loss for content preservation
+
+    def forward(self, fake, real):
+        loss = self.l1(fake, real)  # L1 loss between fake (generated) and real (ground truth)
+        return loss    
     
 class DiscriminatorLoss(nn.Module):
     def __init__(self,):

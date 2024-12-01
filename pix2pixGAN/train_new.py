@@ -37,7 +37,7 @@ batch_size = args.batch_size
 epochs = args.epochs
 learning_rate = args.lr
 
-dataset = MetalArtifactDataset(metal_dir=metal_dir, gt_dir=gt_dir, augment=False)
+dataset = MetalArtifactDataset(metal_dir=metal_dir, gt_dir=gt_dir, augment=True)
 
 # Define the split sizes
 total_images = len(dataset)
@@ -137,6 +137,8 @@ for epoch in range(epochs):
     logger.add_scalar('SSIM', avg_ssim, epoch + 1)
     logger.add_scalar('PSNR', avg_psnr, epoch + 1)
     logger.save_weights(generator.state_dict(), 'generator')
+    if(epoch % 10 == 0):
+        logger.save_weights(generator.state_dict(), f'generator_{epoch}')
     logger.save_weights(discriminator.state_dict(), 'discriminator')
     print(f"[Epoch {epoch+1}/{epochs}] [G loss: {g_loss:.3f}] [D loss: {d_loss:.3f}] [SSIM: {avg_ssim:.3f}] [PSNR: {avg_psnr:.3f}] ETA: {time.time() - start:.3f}s")
     

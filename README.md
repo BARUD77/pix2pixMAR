@@ -98,17 +98,19 @@ To train the model you will first need to download the dataset as explaing in th
 Here's the list of arguments:
 
 1. `--path`: path to the training dataset
-2. `--batch_size` (Optional): Batch size for training and validation.
-3. `--epochs` (Optional): Number of training epochs.
-4. `--lr` (Optional): Learning rate for the optimizer.
-5. `--checkpoints` (Optional): Enable saving checkpoints during training. Every 10 epochs the model state is saved.
+2. `--batch_size` *(Optional)*: Batch size for training and validation.
+3. `--epochs` *(Optional)*: Number of training epochs.
+4. `--lr` *(Optional)*: Learning rate for the optimizer.
+5. `--checkpoints` *(Optional)*: Enable saving checkpoints during training. Every 10 epochs the model state is saved.
 
 Here's a sample command:
+
 `python train.py --path Data/Dataset/train --epochs 100`
 
 ## Inference
 
 To run inference simply run:
+
 `python restore.py --path [path] --weights [path]`
 
 The script takes 2 arguments:

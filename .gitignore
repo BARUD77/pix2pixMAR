@@ -1,0 +1,47 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environment directories
+venv/
+env/
+
+# Distribution / Packaging
+build/
+dist/
+*.egg-info/
+
+# PyTorch checkpoints and weights
+*.pt
+*.pth
+
+# Dataset files
+*.h5
+*.csv
+*.tsv
+*.json
+*.zip
+
+# Logs and Debugging
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+
+# IDE Specific Files
+.idea/
+.vscode/
+*.iml
+*.code-workspace
+
+
+Experiments/*
+Data/*
+outputs/*
+inputs/*

@@ -2,12 +2,13 @@
 
 This repo contains our implementation of Pix2PixMAR, a model for Metal Artifact Reduction in CT images.
 
-![results](images/200_2.png)
-![results](images/200_3.png)
+![results](Images/200_2.png)
+
+![results](Images/200_3.png)
 
 Metal artifacts in computed tomography (CT) images, caused by metallic implants or objects, pose significant challenges in accurate diagnosis by introducing severe streaks and distortions. Conventional methods for metal artifact reduction (MAR), such as linear interpolation or iterative reconstruction, often fail to completely eliminate these artifacts without compromising image quality. We propose a **Pix2Pix Generative Adversarial Network (GAN)** with **U-Net** generator model. Our model achieves an **SSIM of 0.8514** and a **PSNR of 29.0140**.
 
-![results](images/Architecture.png)
+![results](Images/Architecture.png)
 
 ## Installation
 
@@ -22,7 +23,7 @@ Metal artifacts in computed tomography (CT) images, caused by metallic implants 
    ```
 
 3. Install the [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit) for GPU accelaration. If you do not have a nvidia GPU you can skip this and run the project with your CPU.
-4. Install pytorch from their [site](https://pytorch.org/) and select the os and cude version you're running on. Example:
+4. Install pytorch from their [site](https://pytorch.org/) and select the os and cuda version you're running on. Example:
 
    `conda install pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 -c pytorch -c nvidia`
 
